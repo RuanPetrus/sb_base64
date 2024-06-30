@@ -84,22 +84,53 @@ uint8_t *encode_base64(const uint8_t *content, size_t content_len, size_t *diges
 	return digest;
 }
 
-int main()
+char *shift_args(int *argc, char ***argv)
 {
-	const char *path = "teste.txt";
-	size_t content_len, digest_len, i;
-	const uint8_t *content = read_entire_file(path, &content_len);
+	assert(*argc > 0);
+	(*argc)--;
+	return *((*argv)++);
+}
 
-	if (content == NULL) {
-		fprintf(stderr, "Error: Could not open file %s\n", path);
+void usage(FILE *f, const char *program) {
+	fprintf(f, "Uso: %s <input_file> <output_file>\n", program);
+	fprintf(f, "Cria um novo arquivo em codificacao base64 da <input_file> com nome <output_file>\n");
+	fprintf(f, "\n");
+	fprintf(f, "Exemplos:\n");
+	fprintf(f, "    ./build/base64 teste.txt output.txt\n");
+}
+
+int main(int argc, char **argv)
+{
+	const char *program = shift_args(&argc, &argv);
+
+	if (argc == 0) {
+		fprintf(stderr, "Error: Esta faltando o arquivo de input\n");
+		usage(stderr, program);
 		exit(1);
 	}
+	const char* input_path = shift_args(&argc, &argv);
+
+	if (argc == 0) {
+		fprintf(stderr, "Error: Esta faltando o arquivo de output\n");
+		usage(stderr, program);
+		exit(1);
+	}
+	const char* output_path = shift_args(&argc, &argv);
+
+	size_t content_len, digest_len, i;
+	const uint8_t *content = read_entire_file(input_path, &content_len);
+
+	if (content == NULL) {
+		fprintf(stderr, "Error: Could not open input file %s\n", input_path);
+		exit(1);
+	}
+
 	uint8_t *digest = encode_base64(content, content_len, &digest_len);
 
-	for (i = 0; i < digest_len; i++) fprintf(stdout, "%c", digest[i]);
-	fprintf(stdout, "\n");
-
+	FILE *f = fopen(output_path, "w");
+	for (i = 0; i < digest_len; i++) fprintf(f, "%c", digest[i]);
+	fprintf(f, "\n");
+	fclose(f);
 	free(digest);
-
 	return 0;
 }
